@@ -53,5 +53,41 @@ try:
     archivo2_csv = 'C:\\ProgramData\\Jenkins\\.jenkins\\jobs\\PIPELINE_TPARCIAL\\clientes_EstadoLead.csv'
     data_fasignar.to_csv(archivo2_csv, index=False)
     print(f"Datos exportados exitosamente a {archivo_csv}")
+    ## ASIGNAR AL ASESOR DE VENTA - YULINO
+    df_vend=pd.read_csv('C:\\ProgramData\\Jenkins\\.jenkins\\jobs\\PIPELINE_TPARCIAL\\vendedores.csv',sep = ";",encoding = "UTF-8")
+
+    # Importamos dataset de prueba
+    prueba=pd.read_csv('C:\\ProgramData\\Jenkins\\.jenkins\\jobs\\PIPELINE_TPARCIAL\\clientes_EstadoLead.csv',sep = ",",encoding = "UTF-8").fillna('')#rellenamos los na como cadenas vacias para evitar errores
+
+    prueba['Codigo_vendedor']=prueba['Codigo_vendedor'].astype(str) #cambiamos codigo vendedor a string
+
+    prueba #imprimimos dataset de prueba
+
+    conteo=prueba['Codigo_vendedor'].value_counts(dropna=True).to_dict() #dropna evita que tomemos los nan o "not a number"
+    vendedores_posibles = df_vend['Codigo_vendedor'].dropna().unique().tolist()
+    if conteo == {} or '' in conteo:
+        conteo = {vendedor: 0 for vendedor in vendedores_posibles}
+    print(conteo)
+    def asignar_vendedor_dinamico(row):
+
+        if pd.notna(row['Codigo_vendedor'])  and row['Codigo_vendedor'] != "": #Evitamos que las solicitudes que ya fueron asignadas se sobreescriban
+
+            return row['Codigo_vendedor']
+        cod_V=""
+
+        cod_V = min(conteo, key=conteo.get)
+
+        if row['Estado Lead'] in ["No asignar"]:
+            return ""
+        else:
+            conteo[cod_V] += 1
+            return cod_V
+        
+
+    prueba['Codigo_vendedor'] = prueba.apply(asignar_vendedor_dinamico, axis=1) #apply nos permite usar la funcion en cada fila
+    prueba
+    #Hacemos un join para obtener la informacion de los vendedores de vendedores.csv
+    lista_correos=pd.merge(prueba,df_vend,on='Codigo_vendedor',how='left').fillna('')
+    lista_correos.to_excel('C:\\ProgramData\\Jenkins\\.jenkins\\jobs\\PIPELINE_TPARCIAL\\lista_correos.xlsx', index=False)
 except Exception as e:
     print(f"Error al transformar los datos: {e}")
